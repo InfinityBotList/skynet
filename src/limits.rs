@@ -1,10 +1,10 @@
 use poise::serenity_prelude::{UserId, GuildId};
-use sqlx::{types::{Uuid, chrono::{DateTime, Utc}}, PgPool};
-use strum_macros::{EnumString, EnumVariantNames};
+use sqlx::{types::{Uuid, chrono::{DateTime, Utc}}, PgPool, postgres::types::PgInterval};
+use strum_macros::{EnumString, EnumVariantNames, Display};
 
 use crate::Error;
 
-#[derive(EnumString, PartialEq, EnumVariantNames, Clone)]
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
     RoleAdd,
@@ -75,13 +75,14 @@ pub struct Limit {
     pub limit_type: UserLimitTypes,
     pub limit_action: UserLimitActions,
     pub limit_per: i32,
+    pub limit_time: PgInterval,
 }
 
 impl Limit {
     pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT limit_id, limit_type, limit_action, limit_per
+                SELECT limit_id, limit_type, limit_action, limit_per, limit_time
                 FROM limits
                 WHERE guild_id = $1
             ",
@@ -99,6 +100,7 @@ impl Limit {
                 limit_type: r.limit_type.parse()?,
                 limit_action: r.limit_action.parse()?,
                 limit_per: r.limit_per,
+                limit_time: r.limit_time
             });
         }
 
@@ -114,19 +116,41 @@ pub struct UserLimitsHit {
 }
 
 impl UserLimitsHit {
-    /// Returns a list of all limits that have been hit for a specific user.
-    pub fn from(limits: Vec<Limit>, actions: Vec<Action>) -> Vec<Self> {
+    /// Returns a list of all limits that have been hit for a specific user
+    pub async fn from(guild_id: GuildId, pool: &PgPool) -> Result<Vec<Self>, Error> {
+        let limits = Limit::from_guild(pool, guild_id).await?;
+        
         let mut hits = Vec::new();
 
         for limit in limits {
             let mut cause = Vec::new();
 
-            for action in actions.iter() {
-                if action.limit_type == limit.limit_type {
-                    cause.push(action.clone());
-                }
+            // Find all actions that apply to this limit
+            let rec = sqlx::query!(
+                "
+                    SELECT created_at, user_id, action_target
+                    FROM user_actions
+                    WHERE guild_id = $1
+                    AND NOW() - created_at < $2
+                    AND limit_type = $3
+                ",
+                guild_id.to_string(),
+                limit.limit_time,
+                limit.limit_type.to_string()
+            )
+            .fetch_all(pool)
+            .await?;
+        
+            for r in rec {
+                cause.push(Action {
+                    guild_id,
+                    limit_type: limit.limit_type.clone(),
+                    created_at: r.created_at,
+                    user_id: r.user_id.parse()?,
+                    action_target: r.action_target.parse()?,
+                });
             }
-
+    
             if cause.len() >= limit.limit_per as usize {
                 hits.push(Self {
                     limit_type: limit.limit_type,
@@ -137,6 +161,6 @@ impl UserLimitsHit {
             }
         }
 
-        hits
+        Ok(hits)
     }
 }

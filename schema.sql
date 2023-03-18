@@ -10,7 +10,8 @@ CREATE TABLE limits (
     limit_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     limit_type TEXT NOT NULL,
     limit_action TEXT NOT NULL,
-    limit_per INTEGER NOT NULL
+    limit_per INTEGER NOT NULL,
+    limit_time INTERVAL NOT NULL
 );
 
 CREATE TABLE user_actions (
