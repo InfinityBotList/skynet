@@ -24,7 +24,7 @@ indexmap = { version = "1.9.1", features = ["serde"] }
 strum = "0.24"
 strum_macros = "0.24"
 rand = "0.8"
-axum = "0.6"
+moka = { version = "0", features = ["future"] }
 
 [dependencies.tokio]
 version = "1"

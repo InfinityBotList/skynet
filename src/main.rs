@@ -1,6 +1,6 @@
 use log::{info, error};
-use poise::serenity_prelude::{FullEvent, GuildId};
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use poise::serenity_prelude::FullEvent;
+use sqlx::postgres::PgPoolOptions;
 
 use crate::cache::CacheHttpImpl;
 
@@ -10,6 +10,7 @@ mod crypto;
 mod cache;
 mod owner;
 mod stats;
+mod limits;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
