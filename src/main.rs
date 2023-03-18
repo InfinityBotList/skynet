@@ -6,7 +6,6 @@ use crate::cache::CacheHttpImpl;
 
 mod config;
 mod help;
-mod states;
 mod crypto;
 mod cache;
 mod owner;
@@ -128,6 +127,7 @@ async fn main() {
                 help::help(),
                 help::simplehelp(),
                 stats::stats(),
+                owner::guild()
             ],
             /// This code is run before every command
             pre_command: |ctx| {
