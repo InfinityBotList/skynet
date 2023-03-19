@@ -92,6 +92,12 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                 data_about_bot.user.name
             );
         },
+        FullEvent::GuildAuditLogEntryCreate {
+            ctx: _,
+            entry
+        } => {
+            info!("Audit log created: {:?}", entry);
+        },
         _ => {}
     }
 
