@@ -120,7 +120,7 @@ async fn main() {
         .build();
 
     let client_builder =
-        serenity::all::ClientBuilder::new_with_http(http, serenity::all::GatewayIntents::all());
+        serenity::all::ClientBuilder::new_with_http(http, serenity::all::GatewayIntents::non_privileged());
 
     let framework = poise::Framework::new(
         poise::FrameworkOptions {
