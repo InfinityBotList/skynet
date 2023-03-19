@@ -1,4 +1,4 @@
-use log::info;
+use log::{info, error};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
 
@@ -53,6 +53,40 @@ pub async fn handle_mod_action(
     for hit_limit in hit {
         // We have a hit limit for this user
         info!("Hit limit: {:?}", hit_limit);
+
+        // Immediately handle the limit
+        let cur_uid = cache_http.cache.current_user().id;
+        let can_mod = {
+            let guild = cache_http.cache.guild(guild_id).ok_or("Guild not found")?;
+        
+            guild.greater_member_hierarchy(cache_http.cache.clone(), cur_uid, user_id)
+        }.unwrap_or(user_id);
+    
+        if can_mod == cur_uid {
+            match hit_limit.limit.limit_action {
+                limits::UserLimitActions::RemoveAllRoles => {
+                    // Get all user roles
+                    if let Ok(mut member) = guild_id.member(cache_http, user_id).await {
+                        let roles = member.roles.clone();
+                        for role in roles.iter() {
+                            if let Err(e) = member.remove_role(&cache_http.http, role).await {
+                                error!("Failed to remove role: {}", e);
+                            }
+                        }
+                    }
+                },
+                limits::UserLimitActions::KickUser => {
+                    if let Err(e) = guild_id.kick(&cache_http.http, user_id).await {
+                        error!("Failed to kick user: {}", e);
+                    }
+                },
+                limits::UserLimitActions::BanUser => {
+                    if let Err(e) = guild_id.ban(&cache_http.http, user_id, 0).await {
+                        error!("Failed to kick user: {}", e);
+                    }
+                },
+            }
+        }
 
         for action in hit_limit.cause.iter() {
             sqlx::query!(
