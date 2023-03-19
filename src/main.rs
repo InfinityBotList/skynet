@@ -126,7 +126,7 @@ async fn main() {
         poise::FrameworkOptions {
             initialize_owners: true,
             prefix_options: poise::PrefixFrameworkOptions {
-                prefix: Some("ibo!".into()),
+                prefix: Some("sky.".into()),
                 ..poise::PrefixFrameworkOptions::default()
             },
             listener: |event, _ctx, user_data| Box::pin(event_listener(event, user_data)),

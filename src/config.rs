@@ -11,7 +11,6 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| Config::load().expect("Failed to 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
     pub database_url: String,
-    pub client_secret: String,
     pub token: String,
     pub proxy_url: String,
     pub owners: Vec<UserId>
@@ -22,7 +21,6 @@ impl Default for Config {
         Self {
             database_url: String::from(""),
             token: String::from(""),
-            client_secret: String::from(""),
             proxy_url: String::from("http://127.0.0.1:3219"),
             owners: vec![
                 UserId(NonZeroU64::new(728871946456137770).unwrap()),
