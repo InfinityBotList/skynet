@@ -37,7 +37,7 @@ branch = "next"
 features = ["model", "http", "cache", "rustls_backend"]
 
 [patch."https://github.com/serenity-rs/serenity"]
-serenity = { git = "https://github.com/cheesycod/serenity", rev = "c4c7da89895583c5996599aac583382bbd6589bb" }
+serenity = { git = "https://github.com/cheesycod/serenity", rev = "f725f75f93294402399fc84471879ccbd5dcd5b3" }
 
 
 [build-dependencies]
