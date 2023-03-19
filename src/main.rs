@@ -97,7 +97,7 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
             entry,
             guild_id
         } => {
-            info!("Audit log created: {:?}. Guild: ", entry, guild_id);
+            info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
         },
         _ => {}
     }
