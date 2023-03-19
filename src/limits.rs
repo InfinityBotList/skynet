@@ -1,5 +1,5 @@
 use poise::serenity_prelude::{UserId, GuildId};
-use sqlx::{types::{Uuid, chrono::{DateTime, Utc}}, PgPool, postgres::types::PgInterval};
+use sqlx::{types::{chrono::{DateTime, Utc}}, PgPool, postgres::types::PgInterval};
 use strum_macros::{EnumString, EnumVariantNames, Display};
 
 use crate::Error;
@@ -25,22 +25,15 @@ pub enum UserLimitActions {
     BanUser,
 }
 
-/*
-    limit_type TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    user_id BIGINT NOT NULL,
-    guild_id BIGINT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    action_target BIGINT NOT NULL
- */
 #[derive(Clone, Debug)]
 pub struct Action {
-    pub action_id: Uuid,
+    pub action_id: String,
     pub limit_type: UserLimitTypes,
     pub created_at: DateTime<Utc>,
     pub user_id: UserId,
     pub guild_id: GuildId,
     pub action_target: UserId,
-    pub handled_for: Vec<Uuid>,
+    pub handled_for: Vec<String>,
 }
 
 impl Action {
@@ -77,7 +70,7 @@ impl Action {
 #[derive(Debug)]
 pub struct Limit {
     pub guild_id: GuildId,
-    pub limit_id: Uuid,
+    pub limit_id: String,
     pub limit_type: UserLimitTypes,
     pub limit_action: UserLimitActions,
     pub limit_per: i32,
@@ -136,7 +129,7 @@ impl UserLimitsHit {
                     SELECT action_id, created_at, user_id, action_target, handled_for
                     FROM user_actions
                     WHERE guild_id = $1
-                    AND $4 <> ANY(handled_for)
+                    AND NOT($4 = ANY(handled_for))
                     AND NOW() - created_at < $2
                     AND limit_type = $3
                 ",
