@@ -11,6 +11,7 @@ mod cache;
 mod owner;
 mod stats;
 mod limits;
+mod handler;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
