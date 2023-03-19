@@ -69,7 +69,7 @@ async fn _embed_help(
 
             let _ = writeln!(
                 menu,
-                "/{cmd_name} | ibo!{cmd_name} - {desc}",
+                "/{cmd_name} | sky.{cmd_name} - {desc}",
                 cmd_name = command.name,
                 desc = command
                     .description
