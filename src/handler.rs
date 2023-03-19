@@ -1,21 +1,12 @@
 use log::info;
-use poise::serenity_prelude::{GuildId, Member};
+use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
 
 use crate::{Error, cache::CacheHttpImpl, limits};
 
-/*
-    limit_type TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    user_id TEXT NOT NULL,
-    guild_id TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    action_target TEXT NOT NULL
-
- */
-
 pub async fn handle_mod_action(
     guild_id: GuildId,
-    member: Member,
+    user_id: UserId,
     pool: &PgPool,
     cache_http: &CacheHttpImpl,
     action: limits::UserLimitTypes,
@@ -28,7 +19,7 @@ pub async fn handle_mod_action(
             VALUES ($1, $2, $3, $4)
         ",
         guild_id.to_string(),
-        member.user.id.to_string(),
+        user_id.to_string(),
         action.to_string(),
         action_target
     )
@@ -61,7 +52,7 @@ pub async fn handle_mod_action(
             (guild_id, user_id, limit_id, cause)
             VALUES ($1, $2, $3, $4)",
             guild_id.to_string(),
-            member.user.id.to_string(),
+            user_id.to_string(),
             hit_limit.limit.limit_id,
             &hit_limit.cause.iter().map(|a| a.action_id).collect::<Vec<_>>()
         )

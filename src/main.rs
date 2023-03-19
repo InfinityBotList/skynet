@@ -1,5 +1,5 @@
 use log::{info, error};
-use poise::serenity_prelude::FullEvent;
+use poise::serenity_prelude::{FullEvent, Action, ChannelAction};
 use sqlx::postgres::PgPoolOptions;
 
 use crate::cache::CacheHttpImpl;
@@ -98,6 +98,62 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
             guild_id
         } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
+
+            let res = match entry.action {
+                Action::Channel(ch) => {
+                    let ch_id = entry.target_id.ok_or("No channel ID found")?;
+
+                    match ch {
+                        ChannelAction::Create => {
+                            info!("Channel created: {}", ch_id);
+
+                            handler::handle_mod_action(
+                                *guild_id,
+                                entry.user_id,
+                                &user_data.pool,
+                                &user_data.cache_http,
+                                limits::UserLimitTypes::ChannelAdd,
+                                ch_id.to_string()
+                            ).await
+                        },
+                        ChannelAction::Delete => {
+                            info!("Channel deleted: {}", ch_id);
+
+                            handler::handle_mod_action(
+                                *guild_id,
+                                entry.user_id,
+                                &user_data.pool,
+                                &user_data.cache_http,
+                                limits::UserLimitTypes::ChannelRemove,
+                                ch_id.to_string()
+                            ).await
+                        },
+                        ChannelAction::Update => {
+                            info!("Channel updated: {}", ch_id);
+
+                            handler::handle_mod_action(
+                                *guild_id,
+                                entry.user_id,
+                                &user_data.pool,
+                                &user_data.cache_http,
+                                limits::UserLimitTypes::ChannelUpdate,
+                                ch_id.to_string()
+                            ).await
+                        },
+                        _ => {
+                            Ok(())
+                        }
+                    }
+                } 
+                _ => {
+                    Ok(())
+                },
+            };
+
+            if let Err(res) = res {
+                error!("Error while handling audit log: {}", res);
+                return Err(res);
+            }
         },
         _ => {}
     }

@@ -10,6 +10,7 @@ pub enum UserLimitTypes {
     RoleAdd,
     RoleRemove,
     ChannelAdd,
+    ChannelUpdate,
     ChannelRemove,
     Kick,
     Ban,
