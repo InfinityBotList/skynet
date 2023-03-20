@@ -1,4 +1,4 @@
-use log::{info, error};
+use log::{info, error, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
 
@@ -63,6 +63,7 @@ pub async fn handle_mod_action(
         }.unwrap_or(user_id);
     
         if can_mod == cur_uid {
+            info!("Moderating user");
             match hit_limit.limit.limit_action {
                 limits::UserLimitActions::RemoveAllRoles => {
                     // Get all user roles
@@ -86,6 +87,8 @@ pub async fn handle_mod_action(
                     }
                 },
             }
+        } else {
+            warn!("Cannot moderate user, not enough permissions");
         }
 
         for action in hit_limit.cause.iter() {
