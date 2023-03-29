@@ -1,5 +1,5 @@
 use log::{info, error};
-use poise::serenity_prelude::{FullEvent, Action, ChannelAction};
+use poise::serenity_prelude::{FullEvent, Action, ChannelAction, RoleAction};
 use sqlx::postgres::PgPoolOptions;
 
 use crate::cache::CacheHttpImpl;
@@ -14,6 +14,7 @@ mod limits;
 mod handler;
 mod cmds;
 mod access;
+mod utils;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -146,7 +147,52 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                             Ok(())
                         }
                     }
-                } 
+                },
+                Action::Role(ra) => {
+                    let r_id = entry.target_id.ok_or("No role ID found")?;
+
+                    match ra {
+                        RoleAction::Create => {
+                            info!("Role created: {}", r_id);
+
+                            handler::handle_mod_action(
+                                *guild_id,
+                                entry.user_id,
+                                &user_data.pool,
+                                &user_data.cache_http,
+                                limits::UserLimitTypes::RoleAdd,
+                                r_id.to_string()
+                            ).await
+                        },
+                        RoleAction::Update => {
+                            info!("Role updated: {}", r_id);
+
+                            handler::handle_mod_action(
+                                *guild_id,
+                                entry.user_id,
+                                &user_data.pool,
+                                &user_data.cache_http,
+                                limits::UserLimitTypes::RoleUpdate,
+                                r_id.to_string()
+                            ).await
+                        },
+                        RoleAction::Delete => {
+                            info!("Role deleted: {}", r_id);
+
+                            handler::handle_mod_action(
+                                *guild_id,
+                                entry.user_id,
+                                &user_data.pool,
+                                &user_data.cache_http,
+                                limits::UserLimitTypes::RoleRemove,
+                                r_id.to_string()
+                            ).await
+                        },
+                        _ => {
+                            Ok(())
+                        }
+                    }
+                },
                 _ => {
                     Ok(())
                 },
@@ -195,6 +241,7 @@ async fn main() {
                 help::simplehelp(),
                 stats::stats(),
                 cmds::ping(),
+                cmds::limits(),
                 owner::guild()
             ],
             /// This code is run before every command

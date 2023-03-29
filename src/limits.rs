@@ -7,17 +7,34 @@ use crate::Error;
 #[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
-    RoleAdd,
-    RoleRemove,
-    ChannelAdd,
-    ChannelUpdate,
-    ChannelRemove,
+    RoleAdd, // set
+    RoleUpdate, // set
+    RoleRemove, // set
+    ChannelAdd, // set
+    ChannelUpdate, // set
+    ChannelRemove, //set
     Kick,
     Ban,
     Unban,
 }
 
-#[derive(EnumString, PartialEq, EnumVariantNames, Clone, Debug)]
+impl UserLimitTypes {
+    pub fn to_cond(&self) -> String {
+        match &self {
+            Self::RoleAdd => "Roles Created".to_string(),
+            Self::RoleUpdate => "Roles Updated".to_string(),
+            Self::RoleRemove => "Role Removed".to_string(),
+            Self::ChannelAdd => "Channels Created".to_string(),
+            Self::ChannelUpdate => "Channels Updated".to_string(),
+            Self::ChannelRemove => "Channels Removed".to_string(),
+            Self::Kick => "Kicks".to_string(),
+            Self::Ban => "Bans".to_string(),
+            Self::Unban => "Unbans".to_string(),
+        }
+    }
+}
+
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitActions {
     RemoveAllRoles,
@@ -71,6 +88,7 @@ impl Action {
 pub struct Limit {
     pub guild_id: GuildId,
     pub limit_id: String,
+    pub limit_name: String,
     pub limit_type: UserLimitTypes,
     pub limit_action: UserLimitActions,
     pub limit_per: i32,
@@ -81,7 +99,7 @@ impl Limit {
     pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT limit_id, limit_type, limit_action, limit_per, limit_time
+                SELECT limit_id, limit_name, limit_type, limit_action, limit_per, limit_time
                 FROM limits
                 WHERE guild_id = $1
             ",
@@ -96,6 +114,7 @@ impl Limit {
             limits.push(Self {
                 guild_id,
                 limit_id: r.limit_id,
+                limit_name: r.limit_name,
                 limit_type: r.limit_type.parse()?,
                 limit_action: r.limit_action.parse()?,
                 limit_per: r.limit_per,

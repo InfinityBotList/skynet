@@ -11,6 +11,7 @@ CREATE TABLE guild_access (
 CREATE TABLE limits (
     guild_id TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
     limit_id TEXT PRIMARY KEY,
+    limit_name TEXT NOT NULL default 'Untitled',
     limit_type TEXT NOT NULL,
     limit_action TEXT NOT NULL,
     limit_per INTEGER NOT NULL,
