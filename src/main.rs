@@ -12,6 +12,8 @@ mod owner;
 mod stats;
 mod limits;
 mod handler;
+mod cmds;
+mod access;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -192,6 +194,7 @@ async fn main() {
                 help::help(),
                 help::simplehelp(),
                 stats::stats(),
+                cmds::ping(),
                 owner::guild()
             ],
             /// This code is run before every command

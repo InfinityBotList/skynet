@@ -2,6 +2,12 @@ CREATE TABLE guilds (
     guild_id TEXT PRIMARY KEY
 );
 
+CREATE TABLE guild_access (
+    guild_id TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    user_id TEXT NOT NULL,
+    access_level TEXT NOT NULL
+);
+
 CREATE TABLE limits (
     guild_id TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
     limit_id TEXT PRIMARY KEY,
