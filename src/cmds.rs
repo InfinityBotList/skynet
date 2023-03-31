@@ -205,11 +205,11 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
         embeds[i] = embeds[i].clone().field(
             limit.limit_name, 
             format!(
-                "If {amount} ``{cond}`` happen every {time} {then}",
+                "If {amount} ``{cond}`` happen every {time}: ``{then}``",
                 amount = limit.limit_per,
                 cond = limit.limit_type.to_cond(),
                 time = crate::utils::parse_pg_interval(limit.limit_time),
-                then = limit.limit_action
+                then = limit.limit_action.to_cond()
             ), 
             false
         );

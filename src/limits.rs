@@ -100,6 +100,16 @@ pub enum UserLimitActions {
     BanUser,
 }
 
+impl UserLimitActions {
+    pub fn to_cond(&self) -> String {
+        match &self {
+            Self::RemoveAllRoles => "Remove All Roles".to_string(),
+            Self::KickUser => "Kick User".to_string(),
+            Self::BanUser => "Ban User".to_string(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Action {
     pub action_id: String,
