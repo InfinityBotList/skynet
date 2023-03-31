@@ -1,5 +1,7 @@
+use std::collections::HashSet;
+
 use log::{info, error};
-use poise::serenity_prelude::{FullEvent, Action, ChannelAction, RoleAction};
+use poise::serenity_prelude::{FullEvent, Action, ChannelAction, RoleAction, UserId};
 use sqlx::postgres::PgPoolOptions;
 
 use crate::cache::CacheHttpImpl;
@@ -13,7 +15,6 @@ mod stats;
 mod limits;
 mod handler;
 mod cmds;
-mod access;
 mod utils;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -227,9 +228,16 @@ async fn main() {
     let client_builder =
         serenity::all::ClientBuilder::new_with_http(http, serenity::all::GatewayIntents::non_privileged());
 
+    // Convert owners to a HashSet
+    let owners = config::CONFIG
+        .owners
+        .iter()
+        .cloned()
+        .collect::<HashSet<UserId>>();
+
     let framework = poise::Framework::new(
         poise::FrameworkOptions {
-            initialize_owners: true,
+            owners,
             prefix_options: poise::PrefixFrameworkOptions {
                 prefix: Some("sky.".into()),
                 ..poise::PrefixFrameworkOptions::default()
@@ -241,12 +249,28 @@ async fn main() {
                 help::simplehelp(),
                 stats::stats(),
                 cmds::ping(),
+                cmds::add_admin(),
+                cmds::remove_admin(),
                 cmds::limits(),
                 owner::guild()
             ],
             /// This code is run before every command
             pre_command: |ctx| {
                 Box::pin(async move {
+                    // Ensure guild exists in db first
+                    if let Some(guild_id) = ctx.guild_id() {
+                        let err = sqlx::query!(
+                            "INSERT INTO guilds (guild_id) VALUES ($1) ON CONFLICT DO NOTHING",
+                            guild_id.to_string()
+                        )
+                        .execute(&ctx.data().pool)
+                        .await;
+
+                        if let Err(err) = err {
+                            error!("Error while inserting guild: {}", err);
+                        }
+                    }
+
                     info!(
                         "Executing command {} for user {} ({})...",
                         ctx.command().qualified_name,
@@ -269,7 +293,7 @@ async fn main() {
             on_error: |error| Box::pin(on_error(error)),
             ..Default::default()
         },
-        move |ctx, _ready, _framework| {
+        move |ctx, _ready, _framework| {            
             Box::pin(async move {
                 Ok(Data {
                     cache_http: CacheHttpImpl {

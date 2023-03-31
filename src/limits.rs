@@ -4,6 +4,44 @@ use strum_macros::{EnumString, EnumVariantNames, Display};
 
 use crate::Error;
 
+#[derive(poise::ChoiceParameter)]
+pub enum UserLimitTypesChoices {
+    #[name = "Role Create"]
+    RoleAdd,
+    #[name = "Role Update"]
+    RoleUpdate,
+    #[name = "Role Remove"]
+    RoleRemove,
+    #[name = "Channel Create"]
+    ChannelAdd,
+    #[name = "Channel Update"]
+    ChannelUpdate,
+    #[name = "Channel Remove"]
+    ChannelRemove,
+    #[name = "Kick"]
+    Kick,
+    #[name = "Ban"]
+    Ban,
+    #[name = "Unban"]
+    Unban,
+}
+
+impl UserLimitTypesChoices {
+    pub fn resolve(self) -> UserLimitTypes {
+        match self {
+            Self::RoleAdd => UserLimitTypes::RoleAdd,
+            Self::RoleUpdate => UserLimitTypes::RoleUpdate,
+            Self::RoleRemove => UserLimitTypes::RoleRemove,
+            Self::ChannelAdd => UserLimitTypes::ChannelAdd,
+            Self::ChannelUpdate => UserLimitTypes::ChannelUpdate,
+            Self::ChannelRemove => UserLimitTypes::ChannelRemove,
+            Self::Kick => UserLimitTypes::Kick,
+            Self::Ban => UserLimitTypes::Ban,
+            Self::Unban => UserLimitTypes::Unban,
+        }
+    }
+}
+
 #[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
@@ -30,6 +68,26 @@ impl UserLimitTypes {
             Self::Kick => "Kicks".to_string(),
             Self::Ban => "Bans".to_string(),
             Self::Unban => "Unbans".to_string(),
+        }
+    }
+}
+
+#[derive(poise::ChoiceParameter)]
+pub enum UserLimitActionsChoices {
+    #[name = "Remove All Roles"]
+    RemoveAllRoles,
+    #[name = "Kick User"]
+    KickUser,
+    #[name = "Ban User"]
+    BanUser,
+}
+
+impl UserLimitActionsChoices {
+    pub fn resolve(self) -> UserLimitActions {
+        match self {
+            Self::RemoveAllRoles => UserLimitActions::RemoveAllRoles,
+            Self::KickUser => UserLimitActions::KickUser,
+            Self::BanUser => UserLimitActions::BanUser,
         }
     }
 }
@@ -118,7 +176,7 @@ impl Limit {
                 limit_type: r.limit_type.parse()?,
                 limit_action: r.limit_action.parse()?,
                 limit_per: r.limit_per,
-                limit_time: r.limit_time
+                limit_time: r.limit_time,
             });
         }
 

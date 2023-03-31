@@ -1,16 +1,17 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE guilds (
     guild_id TEXT PRIMARY KEY
 );
 
-CREATE TABLE guild_access (
+CREATE TABLE guild_admins (
     guild_id TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    user_id TEXT NOT NULL,
-    access_level TEXT NOT NULL
+    user_id TEXT NOT NULL
 );
 
 CREATE TABLE limits (
     guild_id TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
-    limit_id TEXT PRIMARY KEY,
+    limit_id TEXT PRIMARY KEY DEFAULT uuid_generate_v4(),
     limit_name TEXT NOT NULL default 'Untitled',
     limit_type TEXT NOT NULL,
     limit_action TEXT NOT NULL,
