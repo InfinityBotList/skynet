@@ -60,7 +60,7 @@ pub async fn handle_mod_action(
             let guild = cache_http.cache.guild(guild_id).ok_or("Guild not found")?;
         
             guild.greater_member_hierarchy(cache_http.cache.clone(), cur_uid, user_id)
-        }.unwrap_or(user_id);
+        }.unwrap_or(cur_uid);
     
         if can_mod == cur_uid {
             info!("Moderating user");
@@ -88,7 +88,8 @@ pub async fn handle_mod_action(
                 },
             }
         } else {
-            warn!("Cannot moderate user, not enough permissions");
+            warn!("Cannot moderate user, not enough permissions: {}, {}", can_mod, cur_uid);
+	    return Ok(())
         }
 
         for action in hit_limit.cause.iter() {
