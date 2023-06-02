@@ -190,7 +190,7 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
     for limit in limits {
         added += 1;
 
-        if added >= 20 {
+        if added >= 15 {
             added = 0;
             i += 1;
         }
@@ -202,7 +202,7 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
         embeds[i] = embeds[i].clone().field(
             limit.limit_name,
             format!(
-                "If {amount} ``{cond}`` triggered between {time} interval: ``{then}`` [{id}]",
+                "If over {amount} ``{cond}`` triggered between {time} interval: ``{then}`` [{id}]",
                 amount = limit.limit_per,
                 cond = limit.limit_type.to_cond(),
                 time = crate::utils::parse_pg_interval(limit.limit_time),
