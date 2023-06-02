@@ -286,20 +286,6 @@ async fn main() {
             /// This code is run before every command
             pre_command: |ctx| {
                 Box::pin(async move {
-                    // Ensure guild exists in db first
-                    if let Some(guild_id) = ctx.guild_id() {
-                        let err = sqlx::query!(
-                            "INSERT INTO guilds (guild_id) VALUES ($1) ON CONFLICT DO NOTHING",
-                            guild_id.to_string()
-                        )
-                        .execute(&ctx.data().pool)
-                        .await;
-
-                        if let Err(err) = err {
-                            error!("Error while inserting guild: {}", err);
-                        }
-                    }
-
                     info!(
                         "Executing command {} for user {} ({})...",
                         ctx.command().qualified_name,
