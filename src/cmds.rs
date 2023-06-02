@@ -272,3 +272,33 @@ pub async fn limits_remove(
 
     Ok(())
 }
+
+/// Setup the bot
+#[poise::command(prefix_command, slash_command, guild_only)]
+pub async fn setup(ctx: Context<'_>) -> Result<(), Error> {
+    // Check if guild is already setup
+    let count = sqlx::query!(
+        "SELECT COUNT(*) FROM guilds WHERE guild_id = $1",
+        ctx.guild_id().ok_or("Could not get guild id")?.to_string()
+    )
+    .fetch_one(&ctx.data().pool)
+    .await
+    .map_err(|_| "Could not fetch guild status")?;
+
+    if count.count.unwrap_or_default() > 0 {
+        return Err("Guild is already setup".into());
+    }
+
+    // Add guild to db
+    sqlx::query!(
+        "INSERT INTO guilds (guild_id) VALUES ($1)",
+        ctx.guild_id().ok_or("Could not get guild id")?.to_string()
+    )
+    .execute(&ctx.data().pool)
+    .await?;
+
+    ctx.say("Setup successfully. Now you can add limits for SkyNet to monitor for")
+        .await?;
+
+    Ok(())
+}

@@ -2,7 +2,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE guilds (
     guild_id TEXT PRIMARY KEY
-    notify_channel TEXT NOT NULL,
 );
 
 CREATE TABLE guild_admins (

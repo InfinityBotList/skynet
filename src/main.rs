@@ -245,6 +245,7 @@ async fn main() {
                 stats::stats(),
                 cmds::ping(),
                 cmds::perms(),
+                cmds::setup(),
                 cmds::limits(),
                 owner::guild(),
             ],
