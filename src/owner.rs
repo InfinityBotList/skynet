@@ -2,7 +2,7 @@ use std::num::NonZeroU64;
 
 use poise::serenity_prelude::GuildId;
 
-use crate::{Context, Error, config};
+use crate::{config, Context, Error};
 
 async fn is_owner(ctx: Context<'_>) -> Result<bool, Error> {
     if config::CONFIG.owners.contains(&ctx.author().id) {

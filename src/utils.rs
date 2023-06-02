@@ -4,7 +4,8 @@ use sqlx::postgres::types::PgInterval;
 use crate::cache::CacheHttpImpl;
 
 pub fn parse_pg_interval(i: PgInterval) -> String {
-    let seconds = i.microseconds/1000000 + ((i.days * 86400) as i64) + ((i.months * 2628000) as i64);
+    let seconds =
+        i.microseconds / 1000000 + ((i.days * 86400) as i64) + ((i.months * 2628000) as i64);
 
     let dur = std::time::Duration::from_secs(seconds.try_into().unwrap_or_default());
 
@@ -19,7 +20,9 @@ pub async fn is_guild_admin(
 ) -> Result<(), crate::Error> {
     // Convert guild_id to guild
     {
-        let guild = guild_id.to_guild_cached(&cache_http.cache).ok_or("Could not fetch guild from cache")?;
+        let guild = guild_id
+            .to_guild_cached(&cache_http.cache)
+            .ok_or("Could not fetch guild from cache")?;
 
         if user_id == guild.owner_id.to_string() {
             return Ok(());

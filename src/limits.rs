@@ -1,6 +1,10 @@
-use poise::serenity_prelude::{UserId, GuildId};
-use sqlx::{types::{chrono::{DateTime, Utc}}, PgPool, postgres::types::PgInterval};
-use strum_macros::{EnumString, EnumVariantNames, Display};
+use poise::serenity_prelude::{GuildId, UserId};
+use sqlx::{
+    postgres::types::PgInterval,
+    types::chrono::{DateTime, Utc},
+    PgPool,
+};
+use strum_macros::{Display, EnumString, EnumVariantNames};
 
 use crate::Error;
 
@@ -45,10 +49,10 @@ impl UserLimitTypesChoices {
 #[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
-    RoleAdd, // set
-    RoleUpdate, // set
-    RoleRemove, // set
-    ChannelAdd, // set
+    RoleAdd,       // set
+    RoleUpdate,    // set
+    RoleRemove,    // set
+    ChannelAdd,    // set
     ChannelUpdate, // set
     ChannelRemove, //set
     Kick,
@@ -118,14 +122,14 @@ pub struct Action {
     pub user_id: UserId,
     pub guild_id: GuildId,
     pub action_target: UserId,
-    pub handled_for: Vec<String>,
+    pub limits_hit: Vec<String>,
 }
 
 impl Action {
     pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
-                SELECT action_id, limit_type, created_at, user_id, action_target, handled_for
+                SELECT action_id, limit_type, created_at, user_id, action_target, limits_hit
                 FROM user_actions
                 WHERE guild_id = $1
             ",
@@ -144,7 +148,7 @@ impl Action {
                 created_at: r.created_at,
                 user_id: r.user_id.parse()?,
                 action_target: r.action_target.parse()?,
-                handled_for: r.handled_for
+                limits_hit: r.limits_hit,
             });
         }
 
@@ -197,14 +201,14 @@ impl Limit {
 #[derive(Debug)]
 pub struct UserLimitsHit {
     pub limit: Limit,
-    pub cause: Vec<Action>, 
+    pub cause: Vec<Action>,
 }
 
 impl UserLimitsHit {
     /// Returns a list of all limits that have been hit for a specific guild
     pub async fn hit(guild_id: GuildId, pool: &PgPool) -> Result<Vec<Self>, Error> {
         let limits = Limit::from_guild(pool, guild_id).await?;
-        
+
         let mut hits = Vec::new();
 
         for limit in limits {
@@ -213,10 +217,10 @@ impl UserLimitsHit {
             // Find all actions that apply to this limit
             let rec = sqlx::query!(
                 "
-                    SELECT action_id, created_at, user_id, action_target, handled_for
+                    SELECT action_id, created_at, user_id, action_target, limits_hit
                     FROM user_actions
                     WHERE guild_id = $1
-                    AND NOT($4 = ANY(handled_for))
+                    AND NOT($4 = ANY(limits_hit)) -- Not already handled
                     AND NOW() - created_at < $2
                     AND limit_type = $3
                 ",
@@ -224,11 +228,10 @@ impl UserLimitsHit {
                 limit.limit_time,
                 limit.limit_type.to_string(),
                 limit.limit_id
-
             )
             .fetch_all(pool)
             .await?;
-        
+
             for r in rec {
                 cause.push(Action {
                     guild_id,
@@ -237,15 +240,12 @@ impl UserLimitsHit {
                     user_id: r.user_id.parse()?,
                     action_target: r.action_target.parse()?,
                     action_id: r.action_id,
-                    handled_for: r.handled_for
+                    limits_hit: r.limits_hit,
                 });
             }
-    
+
             if cause.len() >= limit.limit_per as usize {
-                hits.push(Self {
-                    limit,
-                    cause,
-                });
+                hits.push(Self { limit, cause });
             }
         }
 

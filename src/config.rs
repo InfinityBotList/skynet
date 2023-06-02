@@ -13,7 +13,7 @@ pub struct Config {
     pub database_url: String,
     pub token: String,
     pub proxy_url: String,
-    pub owners: Vec<UserId>
+    pub owners: Vec<UserId>,
 }
 
 impl Default for Config {
@@ -24,8 +24,8 @@ impl Default for Config {
             proxy_url: String::from("http://127.0.0.1:3219"),
             owners: vec![
                 UserId(NonZeroU64::new(728871946456137770).unwrap()),
-                UserId(NonZeroU64::new(510065483693817867).unwrap())
-            ]
+                UserId(NonZeroU64::new(510065483693817867).unwrap()),
+            ],
         }
     }
 }

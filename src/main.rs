@@ -1,20 +1,21 @@
 use std::collections::HashSet;
 
-use log::{info, error};
-use poise::serenity_prelude::{FullEvent, Action, ChannelAction, RoleAction, UserId};
+use log::{error, info};
+use poise::serenity_prelude::{Action, ChannelAction, FullEvent, RoleAction, UserId};
 use sqlx::postgres::PgPoolOptions;
 
 use crate::cache::CacheHttpImpl;
 
-mod config;
-mod help;
-mod crypto;
+mod autocompletes;
 mod cache;
+mod cmds;
+mod config;
+mod crypto;
+mod handler;
+mod help;
+mod limits;
 mod owner;
 mod stats;
-mod limits;
-mod handler;
-mod cmds;
 mod utils;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
@@ -59,12 +60,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
             );
             if let Some(error) = error {
                 error!("Error in command `{}`: {:?}", ctx.command().name, error,);
-                let err = ctx
-                    .say(format!(
-                        "**{}**",
-                        error
-                    ))
-                    .await;
+                let err = ctx.say(format!("**{}**", error)).await;
 
                 if let Err(e) = err {
                     error!("Error while sending error message: {}", e);
@@ -86,20 +82,17 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
             ctx: _,
         } => {
             info!("Interaction received: {:?}", interaction.id());
-        },
+        }
         FullEvent::Ready {
             data_about_bot,
             ctx: _,
         } => {
-            info!(
-                "{} is ready!",
-                data_about_bot.user.name
-            );
-        },
+            info!("{} is ready!", data_about_bot.user.name);
+        }
         FullEvent::GuildAuditLogEntryCreate {
             ctx: _,
             entry,
-            guild_id
+            guild_id,
         } => {
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
 
@@ -117,9 +110,10 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 &user_data.pool,
                                 &user_data.cache_http,
                                 limits::UserLimitTypes::ChannelAdd,
-                                ch_id.to_string()
-                            ).await
-                        },
+                                ch_id.to_string(),
+                            )
+                            .await
+                        }
                         ChannelAction::Delete => {
                             info!("Channel deleted: {}", ch_id);
 
@@ -129,9 +123,10 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 &user_data.pool,
                                 &user_data.cache_http,
                                 limits::UserLimitTypes::ChannelRemove,
-                                ch_id.to_string()
-                            ).await
-                        },
+                                ch_id.to_string(),
+                            )
+                            .await
+                        }
                         ChannelAction::Update => {
                             info!("Channel updated: {}", ch_id);
 
@@ -141,14 +136,13 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 &user_data.pool,
                                 &user_data.cache_http,
                                 limits::UserLimitTypes::ChannelUpdate,
-                                ch_id.to_string()
-                            ).await
-                        },
-                        _ => {
-                            Ok(())
+                                ch_id.to_string(),
+                            )
+                            .await
                         }
+                        _ => Ok(()),
                     }
-                },
+                }
                 Action::Role(ra) => {
                     let r_id = entry.target_id.ok_or("No role ID found")?;
 
@@ -162,9 +156,10 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 &user_data.pool,
                                 &user_data.cache_http,
                                 limits::UserLimitTypes::RoleAdd,
-                                r_id.to_string()
-                            ).await
-                        },
+                                r_id.to_string(),
+                            )
+                            .await
+                        }
                         RoleAction::Update => {
                             info!("Role updated: {}", r_id);
 
@@ -174,9 +169,10 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 &user_data.pool,
                                 &user_data.cache_http,
                                 limits::UserLimitTypes::RoleUpdate,
-                                r_id.to_string()
-                            ).await
-                        },
+                                r_id.to_string(),
+                            )
+                            .await
+                        }
                         RoleAction::Delete => {
                             info!("Role deleted: {}", r_id);
 
@@ -186,24 +182,21 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 &user_data.pool,
                                 &user_data.cache_http,
                                 limits::UserLimitTypes::RoleRemove,
-                                r_id.to_string()
-                            ).await
-                        },
-                        _ => {
-                            Ok(())
+                                r_id.to_string(),
+                            )
+                            .await
                         }
+                        _ => Ok(()),
                     }
-                },
-                _ => {
-                    Ok(())
-                },
+                }
+                _ => Ok(()),
             };
 
             if let Err(res) = res {
                 error!("Error while handling audit log: {}", res);
                 return Err(res);
             }
-        },
+        }
         _ => {}
     }
 
@@ -225,8 +218,10 @@ async fn main() {
         .ratelimiter_disabled(true)
         .build();
 
-    let client_builder =
-        serenity::all::ClientBuilder::new_with_http(http, serenity::all::GatewayIntents::non_privileged());
+    let client_builder = serenity::all::ClientBuilder::new_with_http(
+        http,
+        serenity::all::GatewayIntents::non_privileged(),
+    );
 
     // Convert owners to a HashSet
     let owners = config::CONFIG
@@ -249,11 +244,44 @@ async fn main() {
                 help::simplehelp(),
                 stats::stats(),
                 cmds::ping(),
-                cmds::add_admin(),
-                cmds::remove_admin(),
+                cmds::perms(),
                 cmds::limits(),
-                owner::guild()
+                owner::guild(),
             ],
+            command_check: Some(|ctx| {
+                Box::pin(async move {
+                    // Look for guild
+                    if let Some(guild_id) = ctx.guild_id() {
+                        if ["register", "help", "simplehelp", "ping", "setup"]
+                            .contains(&ctx.command().name.as_str())
+                        {
+                            return Ok(true);
+                        }
+
+                        let data = ctx.data();
+
+                        let guild = sqlx::query!(
+                            "
+                            SELECT COUNT(*)
+                            FROM guilds
+                            WHERE guild_id = $1
+                        ",
+                            guild_id.to_string()
+                        )
+                        .fetch_one(&data.pool)
+                        .await?;
+
+                        if guild.count.unwrap_or_default() == 0 {
+                            // Guild not found
+                            return Err("Please run ``/setup`` to get started!".into());
+                        }
+
+                        Ok(true)
+                    } else {
+                        Err("This command can only be run from servers".into())
+                    }
+                })
+            }),
             /// This code is run before every command
             pre_command: |ctx| {
                 Box::pin(async move {
@@ -293,7 +321,7 @@ async fn main() {
             on_error: |error| Box::pin(on_error(error)),
             ..Default::default()
         },
-        move |ctx, _ready, _framework| {            
+        move |ctx, _ready, _framework| {
             Box::pin(async move {
                 Ok(Data {
                     cache_http: CacheHttpImpl {
@@ -305,7 +333,6 @@ async fn main() {
                         .connect(&config::CONFIG.database_url)
                         .await
                         .expect("Could not initialize connection"),
-                    
                 })
             })
         },
