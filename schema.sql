@@ -22,6 +22,7 @@ CREATE TABLE limits (
 
 
 -- Stores a list of user actions and which limits they have hit
+-- A user action contributes to a limit
 CREATE TABLE user_actions (
     action_id TEXT PRIMARY KEY,
     limit_type TEXT NOT NULL,
@@ -32,7 +33,7 @@ CREATE TABLE user_actions (
     limits_hit TEXT[] NOT NULL DEFAULT '{}'
 );
 
--- Stores the past limits that have been applied to a user, cannot be done using simple user_actions
+-- Stores the past limits that have been applied in a guild
 CREATE TABLE hit_limits (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,

@@ -247,6 +247,7 @@ async fn main() {
                 cmds::perms(),
                 cmds::setup(),
                 cmds::limits(),
+                cmds::actions(),
                 owner::guild(),
             ],
             command_check: Some(|ctx| {

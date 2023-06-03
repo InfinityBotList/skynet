@@ -2,6 +2,7 @@ use poise::{
     serenity_prelude::{CreateEmbed, Member},
     CreateReply,
 };
+use serenity::{all::UserId, prelude::Mentionable};
 
 use crate::{Context, Error};
 
@@ -184,7 +185,7 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
 
     let mut embeds = vec![];
 
-    let mut added = 0;
+    let mut added: i32 = 0;
     let mut i = 0;
 
     for limit in limits {
@@ -299,6 +300,80 @@ pub async fn setup(ctx: Context<'_>) -> Result<(), Error> {
 
     ctx.say("Setup successfully. Now you can add limits for SkyNet to monitor for")
         .await?;
+
+    Ok(())
+}
+
+/// Action management
+#[poise::command(prefix_command, slash_command, guild_only, subcommands("actions_view"))]
+pub async fn actions(_ctx: Context<'_>) -> Result<(), Error> {
+    Ok(())
+}
+
+/// View actions taken by users that have been recorded by SkyNet
+#[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
+pub async fn actions_view(
+    ctx: Context<'_>,
+    #[description = "User ID (optional)"] user_id: Option<UserId>,
+) -> Result<(), Error> {
+    let actions = {
+        if let Some(user_id) = user_id {
+            crate::limits::Action::user(
+                &ctx.data().pool,
+                ctx.guild_id().ok_or("Could not get guild id")?,
+                user_id,
+            )
+            .await?
+        } else {
+            crate::limits::Action::guild(
+                &ctx.data().pool,
+                ctx.guild_id().ok_or("Could not get guild id")?,
+            )
+            .await?
+        }
+    };
+
+    if actions.is_empty() {
+        ctx.say("No actions recorded").await?;
+        return Ok(());
+    }
+
+    let mut embeds = vec![];
+    let mut added: i32 = 0;
+    let mut i = 0;
+
+    for action in actions {
+        added += 1;
+
+        if added >= 8 {
+            added = 0;
+            i += 1;
+        }
+
+        if embeds.len() <= i {
+            embeds.push(CreateEmbed::default().title("Actions").color(0x00ff00));
+        }
+
+        embeds[i] = embeds[i].clone().field(
+            action.action_id.clone(),
+            format!(
+                "``{limit_type}`` on ``{action_target}`` by {user_id} at <t:{timestamp}:R> [{id}]\n**Hit Limits:** {limits_hit:#?}",
+                limit_type = action.limit_type,
+                action_target = action.action_target,
+                user_id = action.user_id.mention().to_string() + " (" + &action.user_id.to_string() + ")",
+                timestamp = action.created_at.timestamp(),
+                id = action.action_id,
+                limits_hit = action.limits_hit
+            ),
+            false,
+        );
+    }
+
+    let mut reply = CreateReply::new();
+
+    reply.embeds = embeds;
+
+    ctx.send(reply).await?;
 
     Ok(())
 }

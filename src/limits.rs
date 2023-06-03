@@ -121,12 +121,49 @@ pub struct Action {
     pub created_at: DateTime<Utc>,
     pub user_id: UserId,
     pub guild_id: GuildId,
-    pub action_target: UserId,
+    pub action_target: String,
     pub limits_hit: Vec<String>,
 }
 
 impl Action {
-    pub async fn from_guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+    /// Fetch actions for user
+    pub async fn user(
+        pool: &PgPool,
+        guild_id: GuildId,
+        user_id: UserId,
+    ) -> Result<Vec<Self>, Error> {
+        let rec = sqlx::query!(
+            "
+                SELECT action_id, limit_type, created_at, action_target, limits_hit
+                FROM user_actions
+                WHERE guild_id = $1
+                AND user_id = $2
+            ",
+            guild_id.to_string(),
+            user_id.to_string()
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let mut actions = Vec::new();
+
+        for r in rec {
+            actions.push(Self {
+                guild_id,
+                user_id,
+                action_id: r.action_id,
+                limit_type: r.limit_type.parse()?,
+                created_at: r.created_at,
+                action_target: r.action_target.parse()?,
+                limits_hit: r.limits_hit,
+            });
+        }
+
+        Ok(actions)
+    }
+
+    /// Fetch actions for guild
+    pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
         let rec = sqlx::query!(
             "
                 SELECT action_id, limit_type, created_at, user_id, action_target, limits_hit
