@@ -1,4 +1,5 @@
 use poise::serenity_prelude::{GuildId, UserId};
+use serde::Serialize;
 use sqlx::{
     postgres::types::PgInterval,
     types::chrono::{DateTime, Utc},
@@ -46,7 +47,7 @@ impl UserLimitTypesChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug)]
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitTypes {
     RoleAdd,       // set
@@ -114,7 +115,7 @@ impl UserLimitActions {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct Action {
     pub action_id: String,
     pub limit_type: UserLimitTypes,

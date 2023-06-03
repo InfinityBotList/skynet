@@ -338,6 +338,16 @@ pub async fn actions_view(
         return Ok(());
     }
 
+    if actions.len() > 64 {
+        ctx.say(format!(
+            "Please visit {}/actions/{} to view all actions for this server",
+            crate::config::CONFIG.frontend_url,
+            ctx.guild_id().ok_or("Could not get guild id")?
+        ))
+        .await?;
+        return Ok(());
+    }
+
     let mut embeds = vec![];
     let mut added: i32 = 0;
     let mut i = 0;

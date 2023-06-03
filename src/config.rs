@@ -13,7 +13,10 @@ pub struct Config {
     pub database_url: String,
     pub token: String,
     pub proxy_url: String,
+    pub frontend_url: String,
     pub owners: Vec<UserId>,
+    pub client_id: String,
+    pub client_secret: String,
 }
 
 impl Default for Config {
@@ -21,7 +24,10 @@ impl Default for Config {
         Self {
             database_url: String::from(""),
             token: String::from(""),
+            client_id: String::from(""),
+            client_secret: String::from(""),
             proxy_url: String::from("http://127.0.0.1:3219"),
+            frontend_url: String::from("https://skynet.infinitybots.gg"),
             owners: vec![
                 UserId(NonZeroU64::new(728871946456137770).unwrap()),
                 UserId(NonZeroU64::new(510065483693817867).unwrap()),

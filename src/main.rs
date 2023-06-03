@@ -15,6 +15,7 @@ mod handler;
 mod help;
 mod limits;
 mod owner;
+mod server;
 mod stats;
 mod utils;
 
@@ -88,6 +89,11 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
             ctx: _,
         } => {
             info!("{} is ready!", data_about_bot.user.name);
+
+            tokio::task::spawn(server::setup_server(
+                user_data.pool.clone(),
+                user_data.cache_http.clone(),
+            ));
         }
         FullEvent::GuildAuditLogEntryCreate {
             ctx: _,
