@@ -2,7 +2,7 @@ use poise::{
     serenity_prelude::{CreateEmbed, Member},
     CreateReply,
 };
-use serenity::{all::UserId, prelude::Mentionable};
+use serenity::{all::UserId, builder::CreateAttachment, prelude::Mentionable};
 
 use crate::{Context, Error};
 
@@ -114,14 +114,6 @@ pub async fn limits_add(
     limit_time_unit: crate::utils::Unit,
     limit_action: crate::limits::UserLimitActionsChoices,
 ) -> Result<(), Error> {
-    crate::utils::is_guild_admin(
-        &ctx.data().cache_http,
-        &ctx.data().pool,
-        ctx.guild_id().ok_or("Could not get guild id")?,
-        ctx.author().id.to_string(),
-    )
-    .await?;
-
     let limit_type = limit_type.resolve();
     let limit_action = limit_action.resolve();
 
@@ -163,14 +155,6 @@ pub async fn limits_add(
 /// View the limits setup for this server
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
-    crate::utils::is_guild_admin(
-        &ctx.data().cache_http,
-        &ctx.data().pool,
-        ctx.guild_id().ok_or("Could not get guild id")?,
-        ctx.author().id.to_string(),
-    )
-    .await?;
-
     let limits = crate::limits::Limit::from_guild(
         &ctx.data().pool,
         ctx.guild_id().ok_or("Could not get guild id")?,
@@ -231,14 +215,6 @@ pub async fn limits_remove(
     #[autocomplete = "crate::autocompletes::limits_autocomplete"]
     limit_id: String,
 ) -> Result<(), Error> {
-    crate::utils::is_guild_admin(
-        &ctx.data().cache_http,
-        &ctx.data().pool,
-        ctx.guild_id().ok_or("Could not get guild id")?,
-        ctx.author().id.to_string(),
-    )
-    .await?;
-
     // Look for limit using COUNT
     let count = sqlx::query!(
         "
@@ -339,12 +315,13 @@ pub async fn actions_view(
     }
 
     if actions.len() > 64 {
-        ctx.say(format!(
-            "Please visit {}/actions/{} to view all actions for this server",
-            crate::config::CONFIG.frontend_url,
-            ctx.guild_id().ok_or("Could not get guild id")?
-        ))
-        .await?;
+        let actions = serde_json::to_string(&actions).map_err(|_| "Could not serialize actions")?;
+
+        // Create a attachment
+        let attachment = CreateAttachment::bytes(actions.as_bytes(), "actions.json");
+
+        ctx.send(CreateReply::new().attachment(attachment)).await?;
+
         return Ok(());
     }
 

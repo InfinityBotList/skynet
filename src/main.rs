@@ -258,11 +258,22 @@ async fn main() {
             ],
             command_check: Some(|ctx| {
                 Box::pin(async move {
+                    // Guild admin check
+                    if ["help", "simplehelp", "ping"].contains(&ctx.command().name.as_str()) {
+                        return Ok(true);
+                    }
+
+                    crate::utils::is_guild_admin(
+                        &ctx.data().cache_http,
+                        &ctx.data().pool,
+                        ctx.guild_id().ok_or("Could not get guild id")?,
+                        ctx.author().id.to_string(),
+                    )
+                    .await?;
+
                     // Look for guild
                     if let Some(guild_id) = ctx.guild_id() {
-                        if ["register", "help", "simplehelp", "ping", "setup"]
-                            .contains(&ctx.command().name.as_str())
-                        {
+                        if ["register", "setup"].contains(&ctx.command().name.as_str()) {
                             return Ok(true);
                         }
 
