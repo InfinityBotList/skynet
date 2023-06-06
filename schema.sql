@@ -34,11 +34,12 @@ CREATE TABLE user_actions (
 );
 
 -- Stores the past limits that have been applied in a guild
-CREATE TABLE hit_limits (
+CREATE TABLE past_hit_limits (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
     guild_id TEXT NOT NULL REFERENCES guilds(guild_id) ON DELETE CASCADE ON UPDATE CASCADE,
     limit_id TEXT NOT NULL REFERENCES limits(limit_id) ON DELETE CASCADE ON UPDATE CASCADE,
     cause TEXT[] NOT NULL DEFAULT '{}',
-    notes TEXT[] NOT NULL DEFAULT '{}'
+    notes TEXT[] NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

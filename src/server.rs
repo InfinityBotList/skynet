@@ -134,7 +134,7 @@ async fn confirm_login(
     .map_err(|e| ServerError::Error(e.to_string()))?;
 
     // Find all actions
-    let actions = crate::limits::Action::guild(&app_state.pool, data.state)
+    let actions = crate::core::Action::guild(&app_state.pool, data.state)
         .await
         .map_err(|e| ServerError::Error(e.to_string()))?;
 

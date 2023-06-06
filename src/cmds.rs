@@ -97,7 +97,7 @@ pub async fn remove_admin(ctx: Context<'_>, user: Member) -> Result<(), Error> {
     prefix_command,
     slash_command,
     guild_only,
-    subcommands("limits_add", "limits_view", "limits_remove")
+    subcommands("limits_add", "limits_view", "limits_remove", "hit_limits")
 )]
 pub async fn limits(_ctx: Context<'_>) -> Result<(), Error> {
     Ok(())
@@ -108,11 +108,11 @@ pub async fn limits(_ctx: Context<'_>) -> Result<(), Error> {
 pub async fn limits_add(
     ctx: Context<'_>,
     limit_name: String,
-    limit_type: crate::limits::UserLimitTypesChoices,
+    limit_type: crate::core::UserLimitTypesChoices,
     limit_per: i32,
     limit_time: i64,
     limit_time_unit: crate::utils::Unit,
-    limit_action: crate::limits::UserLimitActionsChoices,
+    limit_action: crate::core::UserLimitActionsChoices,
 ) -> Result<(), Error> {
     let limit_type = limit_type.resolve();
     let limit_action = limit_action.resolve();
@@ -155,7 +155,7 @@ pub async fn limits_add(
 /// View the limits setup for this server
 #[poise::command(prefix_command, slash_command, guild_only, rename = "view")]
 pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
-    let limits = crate::limits::Limit::from_guild(
+    let limits = crate::core::Limit::from_guild(
         &ctx.data().pool,
         ctx.guild_id().ok_or("Could not get guild id")?,
     )
@@ -294,14 +294,14 @@ pub async fn actions_view(
 ) -> Result<(), Error> {
     let actions = {
         if let Some(user_id) = user_id {
-            crate::limits::Action::user(
+            crate::core::Action::user(
                 &ctx.data().pool,
                 ctx.guild_id().ok_or("Could not get guild id")?,
                 user_id,
             )
             .await?
         } else {
-            crate::limits::Action::guild(
+            crate::core::Action::guild(
                 &ctx.data().pool,
                 ctx.guild_id().ok_or("Could not get guild id")?,
             )
@@ -361,6 +361,96 @@ pub async fn actions_view(
     reply.embeds = embeds;
 
     ctx.send(reply).await?;
+
+    Ok(())
+}
+
+/// View hit limits
+#[poise::command(prefix_command, slash_command, guild_only, rename = "hit")]
+pub async fn hit_limits(
+    ctx: Context<'_>,
+) -> Result<(), Error> {
+    let hit_limits = crate::core::PastHitLimits::guild(
+        &ctx.data().pool,
+        ctx.guild_id().ok_or("Could not get guild id")?,
+    ).await?;        
+
+    if hit_limits.is_empty() {
+        ctx.say("No hit limits recorded").await?;
+        return Ok(());
+    }
+
+    if hit_limits.len() > 64 {
+        let hit_limits = serde_json::to_string(&hit_limits).map_err(|_| "Could not serialize hit_limits")?;
+
+        // Create a attachment
+        let attachment = CreateAttachment::bytes(hit_limits.as_bytes(), "hit_limits.json");
+
+        ctx.send(CreateReply::new().attachment(attachment)).await?;
+
+        return Ok(());
+    }
+
+    let mut embeds = vec![];
+
+    let mut added: i32 = 0;
+    let mut i = 0;
+
+    for hit_limit in hit_limits {
+        added += 1;
+
+        if added >= 8 {
+            added = 0;
+            i += 1;
+        }
+
+        if embeds.len() <= i {
+            embeds.push(CreateEmbed::default().title("Past Limits History").color(0x00ff00));
+        }
+
+        let mut notes = String::new();
+
+        for note in hit_limit.notes {
+            notes.push_str(&format!("- ``{}`` ", note));
+        }
+
+        let mut causes = String::new();
+
+        for cause in hit_limit.cause {
+            causes.push_str(
+                &format!(
+                    "``{limit_type}`` on ``{action_target}`` by {user_id} at <t:{timestamp}:R> [{id}]\n**Hit Limits:** {limits_hit:#?}",
+                    limit_type = cause.limit_type,
+                    action_target = cause.action_target,
+                    user_id = cause.user_id.mention().to_string() + " (" + &cause.user_id.to_string() + ")",
+                    timestamp = cause.created_at.timestamp(),
+                    id = cause.action_id,
+                    limits_hit = cause.limits_hit
+                ),
+            );
+        }
+
+        embeds[i] = embeds[i].clone().field(
+            hit_limit.id.clone(),
+            format!(
+                "Limit ``{limit_id}`` reached by ``{user_id}`` at <t:{timestamp}:R> [{id}]\n**Notes:** {notes}\n**Causes:** {causes}",
+                limit_id = hit_limit.limit_id,
+                user_id = hit_limit.user_id.mention().to_string() + " (" + &hit_limit.user_id.to_string() + ")",
+                timestamp = hit_limit.created_at.timestamp(),
+                id = hit_limit.id,
+                notes = notes,
+                causes = causes
+            ),
+            false,
+        );
+    }
+
+    let mut reply = CreateReply::new();
+
+    reply.embeds = embeds;
+
+    ctx.send(reply).await?;
+
 
     Ok(())
 }

@@ -2,14 +2,14 @@ use log::{error, info, warn};
 use poise::serenity_prelude::{GuildId, UserId};
 use sqlx::PgPool;
 
-use crate::{cache::CacheHttpImpl, limits, Error};
+use crate::{cache::CacheHttpImpl, core, Error};
 
 pub async fn handle_mod_action(
     guild_id: GuildId,
     user_id: UserId,
     pool: &PgPool,
     cache_http: &CacheHttpImpl,
-    action: limits::UserLimitTypes,
+    action: core::UserLimitTypes,
     action_target: String,
 ) -> Result<(), Error> {
     // SAFETY: Tx should be dropped if error occurs, so make a scope to seperate tx queries
@@ -50,7 +50,7 @@ pub async fn handle_mod_action(
         .await?;
 
         // Check if they hit any limits yet
-        let hit = limits::UserLimitsHit::hit(guild_id, pool).await?;
+        let hit = core::CurrentUserLimitsHit::hit(guild_id, pool).await?;
 
         for hit_limit in hit {
             // We have a hit limit for this user
@@ -68,7 +68,7 @@ pub async fn handle_mod_action(
             if can_mod == cur_uid {
                 info!("Moderating user");
                 match hit_limit.limit.limit_action {
-                    limits::UserLimitActions::RemoveAllRoles => {
+                    core::UserLimitActions::RemoveAllRoles => {
                         // Get all user roles
                         if let Ok(mut member) = guild_id.member(cache_http, user_id).await {
                             let roles = member.roles.clone();
@@ -79,12 +79,12 @@ pub async fn handle_mod_action(
                             }
                         }
                     }
-                    limits::UserLimitActions::KickUser => {
+                    core::UserLimitActions::KickUser => {
                         if let Err(e) = guild_id.kick(&cache_http.http, user_id).await {
                             error!("Failed to kick user: {}", e);
                         }
                     }
-                    limits::UserLimitActions::BanUser => {
+                    core::UserLimitActions::BanUser => {
                         if let Err(e) = guild_id.ban(&cache_http.http, user_id, 0).await {
                             error!("Failed to kick user: {}", e);
                         }
@@ -98,7 +98,7 @@ pub async fn handle_mod_action(
 
                 sqlx::query!(
                     "
-                INSERT INTO hit_limits
+                INSERT INTO past_hit_limits
                 (id, guild_id, user_id, limit_id, cause, notes)
                 VALUES ($1, $2, $3, $4, $5, $6)",
                     crate::crypto::gen_random(16),
@@ -133,7 +133,7 @@ pub async fn handle_mod_action(
 
             sqlx::query!(
                 "
-            INSERT INTO hit_limits
+            INSERT INTO past_hit_limits
             (id, guild_id, user_id, limit_id, cause)
             VALUES ($1, $2, $3, $4, $5)",
                 crate::crypto::gen_random(16),

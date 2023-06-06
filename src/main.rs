@@ -13,7 +13,7 @@ mod config;
 mod crypto;
 mod handler;
 mod help;
-mod limits;
+mod core;
 mod owner;
 mod server;
 mod stats;
@@ -115,7 +115,7 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                limits::UserLimitTypes::ChannelAdd,
+                                core::UserLimitTypes::ChannelAdd,
                                 ch_id.to_string(),
                             )
                             .await
@@ -128,7 +128,7 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                limits::UserLimitTypes::ChannelRemove,
+                                core::UserLimitTypes::ChannelRemove,
                                 ch_id.to_string(),
                             )
                             .await
@@ -141,7 +141,7 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                limits::UserLimitTypes::ChannelUpdate,
+                                core::UserLimitTypes::ChannelUpdate,
                                 ch_id.to_string(),
                             )
                             .await
@@ -161,7 +161,7 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                limits::UserLimitTypes::RoleAdd,
+                                core::UserLimitTypes::RoleAdd,
                                 r_id.to_string(),
                             )
                             .await
@@ -174,7 +174,7 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                limits::UserLimitTypes::RoleUpdate,
+                                core::UserLimitTypes::RoleUpdate,
                                 r_id.to_string(),
                             )
                             .await
@@ -187,7 +187,7 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
                                 entry.user_id,
                                 &user_data.pool,
                                 &user_data.cache_http,
-                                limits::UserLimitTypes::RoleRemove,
+                                core::UserLimitTypes::RoleRemove,
                                 r_id.to_string(),
                             )
                             .await

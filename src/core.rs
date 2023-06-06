@@ -97,7 +97,7 @@ impl UserLimitActionsChoices {
     }
 }
 
-#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug)]
+#[derive(EnumString, Display, PartialEq, EnumVariantNames, Clone, Debug, Serialize)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserLimitActions {
     RemoveAllRoles,
@@ -127,6 +127,39 @@ pub struct Action {
 }
 
 impl Action {
+    /// Fetch actions for a action id
+    pub async fn by_id(
+        pool: &PgPool,
+        guild_id: GuildId,
+        action_id: &str,
+    ) -> Result<Self, Error> {
+        let r = sqlx::query!(
+            "
+                SELECT user_id, limit_type, created_at, action_target, limits_hit
+                FROM user_actions
+                WHERE guild_id = $1
+                AND action_id = $2
+            ",
+            guild_id.to_string(),
+            action_id.to_string()
+        )
+        .fetch_one(pool)
+        .await?;
+
+
+    let actions = Self {
+            guild_id,
+            action_id: action_id.to_string(),
+            user_id: r.user_id.parse()?,
+            limit_type: r.limit_type.parse()?,
+            created_at: r.created_at,
+            action_target: r.action_target.parse()?,
+            limits_hit: r.limits_hit,
+        };
+
+        Ok(actions)
+    }
+
     /// Fetch actions for user
     pub async fn user(
         pool: &PgPool,
@@ -237,12 +270,12 @@ impl Limit {
 }
 
 #[derive(Debug)]
-pub struct UserLimitsHit {
+pub struct CurrentUserLimitsHit {
     pub limit: Limit,
     pub cause: Vec<Action>,
 }
 
-impl UserLimitsHit {
+impl CurrentUserLimitsHit {
     /// Returns a list of all limits that have been hit for a specific guild
     pub async fn hit(guild_id: GuildId, pool: &PgPool) -> Result<Vec<Self>, Error> {
         let limits = Limit::from_guild(pool, guild_id).await?;
@@ -289,4 +322,52 @@ impl UserLimitsHit {
 
         Ok(hits)
     }
+}
+
+#[derive(Debug, Serialize)]
+pub struct PastHitLimits {
+    pub id: String,
+    pub user_id: UserId,
+    pub guild_id: GuildId,
+    pub limit_id: String,
+    pub cause: Vec<Action>,
+    pub notes: Vec<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+impl PastHitLimits {
+    /// Fetch actions for guild
+    pub async fn guild(pool: &PgPool, guild_id: GuildId) -> Result<Vec<Self>, Error> {
+        let rec = sqlx::query!(
+            "
+                SELECT id, user_id, limit_id, cause, notes, created_at FROM past_hit_limits
+                WHERE guild_id = $1
+            ",
+            guild_id.to_string()
+        )
+        .fetch_all(pool)
+        .await?;
+
+        let mut hits = Vec::new();
+
+        for r in rec {
+            let mut cause = vec![];
+
+            for action in r.cause {
+                cause.push(Action::by_id(pool, guild_id, &action).await?);
+            }
+
+            hits.push(Self {
+                guild_id,
+                id: r.id,
+                limit_id: r.limit_id,
+                created_at: r.created_at,
+                user_id: r.user_id.parse()?,
+                notes: r.notes,
+                cause,
+            });
+        }
+
+        Ok(hits)
+    }    
 }
