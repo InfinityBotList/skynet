@@ -1,0 +1,7 @@
+language: rust
+project: "skynet"
+binary: "skynet"
+service: "skynet"
+lang_opts:
+env:
+  DATABASE_URL: postgres://localhost/skynet 

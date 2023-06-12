@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use log::{error, info};
-use poise::serenity_prelude::{Action, ChannelAction, FullEvent, RoleAction, UserId};
+use poise::serenity_prelude::{FullEvent, RoleAction, UserId};
+use serenity::model::guild::audit_log::{Action, ChannelAction};
 use sqlx::postgres::PgPoolOptions;
 
 use crate::cache::CacheHttpImpl;
