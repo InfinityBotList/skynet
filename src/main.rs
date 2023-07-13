@@ -19,6 +19,7 @@ mod owner;
 mod server;
 mod stats;
 mod utils;
+mod tasks;
 
 type Error = Box<dyn std::error::Error + Send + Sync>;
 type Context<'a> = poise::Context<'a, Data, Error>;
@@ -87,13 +88,19 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
         }
         FullEvent::Ready {
             data_about_bot,
-            ctx: _,
+            ctx,
         } => {
             info!("{} is ready!", data_about_bot.user.name);
 
             tokio::task::spawn(server::setup_server(
                 user_data.pool.clone(),
                 user_data.cache_http.clone(),
+            ));
+
+            tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
+                user_data.pool.clone(),
+                user_data.cache_http.clone(),
+                ctx.clone()
             ));
         }
         FullEvent::GuildAuditLogEntryCreate {
