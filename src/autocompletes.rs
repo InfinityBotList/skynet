@@ -3,7 +3,7 @@ use crate::Context;
 pub async fn limits_autocomplete<'a>(
     ctx: Context<'_>,
     partial: &'a str,
-) -> Vec<poise::AutocompleteChoice<String>> {
+) -> Vec<serenity::all::AutocompleteChoice> {
     // Fetch all limits available
     let data = ctx.data();
 
@@ -22,10 +22,7 @@ pub async fn limits_autocomplete<'a>(
 
         for limit in limits {
             if limit.limit_name.starts_with(partial) {
-                choices.push(poise::AutocompleteChoice {
-                    name: limit.limit_name,
-                    value: limit.limit_id,
-                });
+                choices.push(serenity::all::AutocompleteChoice::new(limit.limit_name, limit.limit_id));
             }
         }
 

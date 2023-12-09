@@ -42,7 +42,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     // and forward the rest to the default handler
     match error {
         poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
-        poise::FrameworkError::Command { error, ctx } => {
+        poise::FrameworkError::Command { error, ctx, .. } => {
             error!("Error in command `{}`: {:?}", ctx.command().name, error,);
             let err = ctx
                 .say(format!(
@@ -55,7 +55,7 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
                 error!("SQLX Error: {}", e);
             }
         }
-        poise::FrameworkError::CommandCheckFailed { error, ctx } => {
+        poise::FrameworkError::CommandCheckFailed { error, ctx, .. } => {
             error!(
                 "[Possible] error in command `{}`: {:?}",
                 ctx.command().name,
@@ -78,17 +78,15 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
-async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error> {
+async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user_data: &Data) -> Result<(), Error> {
     match event {
         FullEvent::InteractionCreate {
             interaction,
-            ctx: _,
         } => {
             info!("Interaction received: {:?}", interaction.id());
         }
         FullEvent::Ready {
             data_about_bot,
-            ctx,
         } => {
             info!("{} is ready!", data_about_bot.user.name);
 
@@ -100,11 +98,10 @@ async fn event_listener(event: &FullEvent, user_data: &Data) -> Result<(), Error
             tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
                 user_data.pool.clone(),
                 user_data.cache_http.clone(),
-                ctx.clone()
+                ctx.clone(),
             ));
         }
         FullEvent::GuildAuditLogEntryCreate {
-            ctx: _,
             entry,
             guild_id,
         } => {
@@ -251,7 +248,7 @@ async fn main() {
                 prefix: Some("sky.".into()),
                 ..poise::PrefixFrameworkOptions::default()
             },
-            listener: |event, _ctx, user_data| Box::pin(event_listener(event, user_data)),
+            event_handler: |ctx, event, _fc, user_data| Box::pin(event_listener(ctx, event, user_data)),
             commands: vec![
                 register(),
                 help::help(),
@@ -309,7 +306,6 @@ async fn main() {
                     }
                 })
             }),
-            /// This code is run before every command
             pre_command: |ctx| {
                 Box::pin(async move {
                     info!(
@@ -320,7 +316,6 @@ async fn main() {
                     );
                 })
             },
-            /// This code is run after every command returns Ok
             post_command: |ctx| {
                 Box::pin(async move {
                     info!(

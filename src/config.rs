@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use poise::serenity_prelude::UserId;
 use serde::{Deserialize, Serialize};
-use std::{fs::File, io::Write, num::NonZeroU64};
+use std::{fs::File, io::Write};
 
 use crate::Error;
 
@@ -29,8 +29,8 @@ impl Default for Config {
             proxy_url: String::from("http://127.0.0.1:3219"),
             frontend_url: String::from("https://skynet.infinitybots.gg"),
             owners: vec![
-                UserId(NonZeroU64::new(728871946456137770).unwrap()),
-                UserId(NonZeroU64::new(510065483693817867).unwrap()),
+                UserId::new(728871946456137770),
+                UserId::new(510065483693817867),
             ],
         }
     }

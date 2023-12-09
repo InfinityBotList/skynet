@@ -70,7 +70,7 @@ pub async fn handle_mod_action(
                 match hit_limit.limit.limit_action {
                     core::UserLimitActions::RemoveAllRoles => {
                         // Get all user roles
-                        if let Ok(mut member) = guild_id.member(cache_http, user_id).await {
+                        if let Ok(member) = guild_id.member(cache_http, user_id).await {
                             let roles = member.roles.clone();
                             for role in roles.iter() {
                                 if let Err(e) = member.remove_role(&cache_http.http, role).await {

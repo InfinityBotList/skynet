@@ -27,7 +27,7 @@ pub async fn perms(_ctx: Context<'_>) -> Result<(), Error> {
 pub async fn add_admin(ctx: Context<'_>, user: Member) -> Result<(), Error> {
     // Check that user is guild owner
     if ctx.author().id != ctx.guild().ok_or("Could not get guild id")?.owner_id {
-        return Err("Only guild owners can add new admins".into());
+        return Err("In order to protect against nukes, bypassing the bot and other secuity concerns, only guild owners can add new admins at this time.".into());
     }
 
     // Check if user is already an admin, if so return
@@ -107,11 +107,17 @@ pub async fn limits(_ctx: Context<'_>) -> Result<(), Error> {
 #[poise::command(prefix_command, slash_command, guild_only, rename = "add")]
 pub async fn limits_add(
     ctx: Context<'_>,
+    #[description = "The name of the limit"]
     limit_name: String,
+    #[description = "The type of limit to impose on moderators"]
     limit_type: crate::core::UserLimitTypesChoices,
+    #[description = "The amount of times the limit can be hit"]
     limit_per: i32,
+    #[description = "The time interval infractions are counted in"]
     limit_time: i64,
+    #[description = "The time unit for the time interval [seconds/minutes/hours/days]"]
     limit_time_unit: crate::utils::Unit,
+    #[description = "The action to take when the limit is hit"]
     limit_action: crate::core::UserLimitActionsChoices,
 ) -> Result<(), Error> {
     let limit_type = limit_type.resolve();
@@ -198,9 +204,10 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
         );
     }
 
-    let mut reply = CreateReply::new();
-
-    reply.embeds = embeds;
+    let reply = CreateReply {
+        embeds,
+        ..Default::default()
+    };
 
     ctx.send(reply).await?;
 
@@ -250,7 +257,7 @@ pub async fn limits_remove(
     Ok(())
 }
 
-/// Setup the bot
+/// Setup the bot if it is not already setup
 #[poise::command(prefix_command, slash_command, guild_only)]
 pub async fn setup(ctx: Context<'_>) -> Result<(), Error> {
     // Check if guild is already setup
@@ -320,7 +327,7 @@ pub async fn actions_view(
         // Create a attachment
         let attachment = CreateAttachment::bytes(actions.as_bytes(), "actions.json");
 
-        ctx.send(CreateReply::new().attachment(attachment)).await?;
+        ctx.send(CreateReply::default().attachment(attachment)).await?;
 
         return Ok(());
     }
@@ -356,9 +363,10 @@ pub async fn actions_view(
         );
     }
 
-    let mut reply = CreateReply::new();
-
-    reply.embeds = embeds;
+    let reply = CreateReply {
+        embeds,
+        ..Default::default()    
+    };
 
     ctx.send(reply).await?;
 
@@ -386,7 +394,7 @@ pub async fn hit_limits(
         // Create a attachment
         let attachment = CreateAttachment::bytes(hit_limits.as_bytes(), "hit_limits.json");
 
-        ctx.send(CreateReply::new().attachment(attachment)).await?;
+        ctx.send(CreateReply::default().attachment(attachment)).await?;
 
         return Ok(());
     }
@@ -445,9 +453,10 @@ pub async fn hit_limits(
         );
     }
 
-    let mut reply = CreateReply::new();
-
-    reply.embeds = embeds;
+    let reply = CreateReply {
+        embeds,
+        ..Default::default()
+    };
 
     ctx.send(reply).await?;
 
