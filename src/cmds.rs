@@ -321,7 +321,7 @@ pub async fn actions_view(
         return Ok(());
     }
 
-    if actions.len() > 64 {
+    if actions.len() > 30 {
         let actions = serde_json::to_string(&actions).map_err(|_| "Could not serialize actions")?;
 
         // Create a attachment
@@ -388,7 +388,7 @@ pub async fn hit_limits(
         return Ok(());
     }
 
-    if hit_limits.len() > 64 {
+    if hit_limits.len() > 30 {
         let hit_limits = serde_json::to_string(&hit_limits).map_err(|_| "Could not serialize hit_limits")?;
 
         // Create a attachment
