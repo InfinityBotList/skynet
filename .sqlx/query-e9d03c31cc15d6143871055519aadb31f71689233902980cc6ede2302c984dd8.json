@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                    SELECT action_id, created_at, user_id, action_target, limits_hit\n                    FROM user_actions\n                    WHERE guild_id = $1\n                    AND NOT($4 = ANY(limits_hit)) -- Not already handled\n                    AND NOW() - created_at < $2\n                    AND limit_type = $3\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "action_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "action_target",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "limits_hit",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Interval",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e9d03c31cc15d6143871055519aadb31f71689233902980cc6ede2302c984dd8"
+}

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM limits\n            WHERE guild_id = $1\n            AND limit_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dd94fcb1011f1e886036b6f8b5cfb4aa0fe3178b952f4ffd5800512392dd91fe"
+}

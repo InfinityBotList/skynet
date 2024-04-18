@@ -1,0 +1,47 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT action_id, limit_type, created_at, action_target, limits_hit\n                FROM user_actions\n                WHERE guild_id = $1\n                AND user_id = $2\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "action_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "limit_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "action_target",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "limits_hit",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "aa1c687c60ab192f31325f9676ace7d65ad99ea4b79b729929d7a01fff5fc185"
+}
