@@ -1,8 +1,6 @@
 use poise::serenity_prelude::GuildId;
 use sqlx::postgres::types::PgInterval;
 
-use crate::cache::CacheHttpImpl;
-
 pub fn parse_pg_interval(i: PgInterval) -> String {
     let seconds =
         i.microseconds / 1000000 + ((i.days * 86400) as i64) + ((i.months * 2628000) as i64);
@@ -13,15 +11,19 @@ pub fn parse_pg_interval(i: PgInterval) -> String {
 }
 
 pub async fn is_guild_admin(
-    cache_http: &CacheHttpImpl,
+    cache_http: impl serenity::all::CacheHttp,
     pool: &sqlx::PgPool,
     guild_id: GuildId,
     user_id: String,
 ) -> Result<(), crate::Error> {
+    let Some(cache) = cache_http.cache() else {
+        return Err("Could not fetch cache".into());
+    };
+    
     // Convert guild_id to guild
     {
         let guild = guild_id
-            .to_guild_cached(&cache_http.cache)
+            .to_guild_cached(cache)
             .ok_or("Could not fetch guild from cache")?;
 
         if user_id == guild.owner_id.to_string() {

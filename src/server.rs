@@ -11,11 +11,11 @@ use axum::{
 use log::info;
 use poise::serenity_prelude::{GuildId, UserId};
 use serde::Deserialize;
-use serenity::json::json;
+use serde_json::json;
 use sqlx::PgPool;
 use tower_http::cors::{Any, CorsLayer};
 
-use crate::cache::CacheHttpImpl;
+use botox::cache::CacheHttpImpl;
 
 pub struct AppState {
     pub cache_http: CacheHttpImpl,

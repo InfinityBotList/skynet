@@ -228,6 +228,7 @@ impl Action {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct Limit {
     pub guild_id: GuildId,
     pub limit_id: String,

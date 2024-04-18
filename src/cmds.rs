@@ -173,10 +173,11 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
         return Ok(());
     }
 
-    let mut embeds = vec![];
+    let mut cr: CreateReply<'_> = CreateReply::default();
 
     let mut added: i32 = 0;
     let mut i = 0;
+    let mut embeds = vec![];
 
     for limit in limits {
         added += 1;
@@ -204,12 +205,11 @@ pub async fn limits_view(ctx: Context<'_>) -> Result<(), Error> {
         );
     }
 
-    let reply = CreateReply {
-        embeds,
-        ..Default::default()
-    };
+    for embed in embeds {
+        cr = cr.embed(embed);
+    }
 
-    ctx.send(reply).await?;
+    ctx.send(cr).await?;
 
     Ok(())
 }
@@ -325,13 +325,14 @@ pub async fn actions_view(
         let actions = serde_json::to_string(&actions).map_err(|_| "Could not serialize actions")?;
 
         // Create a attachment
-        let attachment = CreateAttachment::bytes(actions.as_bytes(), "actions.json");
+        let attachment = CreateAttachment::bytes(actions.into_bytes(), "actions.json");
 
         ctx.send(CreateReply::default().attachment(attachment)).await?;
 
         return Ok(());
     }
 
+    let mut cr = CreateReply::default();
     let mut embeds = vec![];
     let mut added: i32 = 0;
     let mut i = 0;
@@ -363,12 +364,11 @@ pub async fn actions_view(
         );
     }
 
-    let reply = CreateReply {
-        embeds,
-        ..Default::default()    
-    };
+    for embed in embeds {
+        cr = cr.embed(embed);
+    }
 
-    ctx.send(reply).await?;
+    ctx.send(cr).await?;
 
     Ok(())
 }
@@ -392,15 +392,15 @@ pub async fn hit_limits(
         let hit_limits = serde_json::to_string(&hit_limits).map_err(|_| "Could not serialize hit_limits")?;
 
         // Create a attachment
-        let attachment = CreateAttachment::bytes(hit_limits.as_bytes(), "hit_limits.json");
+        let attachment = CreateAttachment::bytes(hit_limits.into_bytes(), "hit_limits.json");
 
         ctx.send(CreateReply::default().attachment(attachment)).await?;
 
         return Ok(());
     }
 
+    let mut cr = CreateReply::default();
     let mut embeds = vec![];
-
     let mut added: i32 = 0;
     let mut i = 0;
 
@@ -453,13 +453,11 @@ pub async fn hit_limits(
         );
     }
 
-    let reply = CreateReply {
-        embeds,
-        ..Default::default()
-    };
+    for embed in embeds {
+        cr = cr.embed(embed);
+    }
 
-    ctx.send(reply).await?;
-
+    ctx.send(cr).await?;
 
     Ok(())
 }

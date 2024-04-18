@@ -4,14 +4,11 @@ use log::{error, info};
 use poise::serenity_prelude::{FullEvent, RoleAction, UserId};
 use serenity::model::guild::audit_log::{Action, ChannelAction};
 use sqlx::postgres::PgPoolOptions;
-
-use crate::cache::CacheHttpImpl;
+use std::sync::Arc;
 
 mod autocompletes;
-mod cache;
 mod cmds;
 mod config;
-mod crypto;
 mod handler;
 mod help;
 mod core;
@@ -27,7 +24,6 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 // User data, which is stored and accessible in all command invocations
 pub struct Data {
     pool: sqlx::PgPool,
-    cache_http: cache::CacheHttpImpl,
 }
 
 #[poise::command(prefix_command)]
@@ -41,7 +37,6 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     // They are many errors that can occur, so we only handle the ones we want to customize
     // and forward the rest to the default handler
     match error {
-        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
         poise::FrameworkError::Command { error, ctx, .. } => {
             error!("Error in command `{}`: {:?}", ctx.command().name, error,);
             let err = ctx
@@ -78,7 +73,10 @@ async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     }
 }
 
-async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user_data: &Data) -> Result<(), Error> {
+async fn event_listener<'a>(
+    ctx: poise::FrameworkContext<'a, Data, Error>,
+    event: &FullEvent,
+) -> Result<(), Error> {
     match event {
         FullEvent::InteractionCreate {
             interaction,
@@ -88,23 +86,28 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
         FullEvent::Ready {
             data_about_bot,
         } => {
+            let user_data = ctx.serenity_context.data::<Data>();
+
             info!("{} is ready!", data_about_bot.user.name);
+
+            let cache_http_server = botox::cache::CacheHttpImpl::from_ctx(ctx.serenity_context);
 
             tokio::task::spawn(server::setup_server(
                 user_data.pool.clone(),
-                user_data.cache_http.clone(),
+                cache_http_server,
             ));
 
-            tokio::task::spawn(crate::tasks::taskcat::start_all_tasks(
-                user_data.pool.clone(),
-                user_data.cache_http.clone(),
-                ctx.clone(),
+            tokio::task::spawn(botox::taskman::start_all_tasks(
+                crate::tasks::tasks(),
+                ctx.serenity_context.clone(),
             ));
         }
         FullEvent::GuildAuditLogEntryCreate {
             entry,
             guild_id,
         } => {
+            let user_data = ctx.serenity_context.data::<Data>();
+
             info!("Audit log created: {:?}. Guild: {}", entry, guild_id);
 
             let res = match entry.action {
@@ -119,7 +122,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                                 *guild_id,
                                 entry.user_id,
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                ctx.serenity_context,
                                 core::UserLimitTypes::ChannelAdd,
                                 ch_id.to_string(),
                             )
@@ -132,7 +135,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                                 *guild_id,
                                 entry.user_id,
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                ctx.serenity_context,
                                 core::UserLimitTypes::ChannelRemove,
                                 ch_id.to_string(),
                             )
@@ -145,7 +148,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                                 *guild_id,
                                 entry.user_id,
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                ctx.serenity_context,
                                 core::UserLimitTypes::ChannelUpdate,
                                 ch_id.to_string(),
                             )
@@ -165,7 +168,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                                 *guild_id,
                                 entry.user_id,
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                ctx.serenity_context,
                                 core::UserLimitTypes::RoleAdd,
                                 r_id.to_string(),
                             )
@@ -178,7 +181,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                                 *guild_id,
                                 entry.user_id,
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                ctx.serenity_context,
                                 core::UserLimitTypes::RoleUpdate,
                                 r_id.to_string(),
                             )
@@ -191,7 +194,7 @@ async fn event_listener(ctx: &serenity::client::Context, event: &FullEvent, user
                                 *guild_id,
                                 entry.user_id,
                                 &user_data.pool,
-                                &user_data.cache_http,
+                                ctx.serenity_context,
                                 core::UserLimitTypes::RoleRemove,
                                 r_id.to_string(),
                             )
@@ -230,9 +233,17 @@ async fn main() {
         .build();
 
     let client_builder = serenity::all::ClientBuilder::new_with_http(
-        http,
+        Arc::new(http),
         serenity::all::GatewayIntents::non_privileged(),
     );
+
+    let data = Data {
+        pool: PgPoolOptions::new()
+        .max_connections(MAX_CONNECTIONS)
+        .connect(&config::CONFIG.database_url)
+        .await
+        .expect("Could not initialize connection"),
+    };
 
     // Convert owners to a HashSet
     let owners = config::CONFIG
@@ -248,7 +259,7 @@ async fn main() {
                 prefix: Some("sky.".into()),
                 ..poise::PrefixFrameworkOptions::default()
             },
-            event_handler: |ctx, event, _fc, user_data| Box::pin(event_listener(ctx, event, user_data)),
+            event_handler: |ctx, event| Box::pin(event_listener(ctx, event)),
             commands: vec![
                 register(),
                 help::help(),
@@ -269,7 +280,7 @@ async fn main() {
                     }
 
                     crate::utils::is_guild_admin(
-                        &ctx.data().cache_http,
+                        &ctx,
                         &ctx.data().pool,
                         ctx.guild_id().ok_or("Could not get guild id")?,
                         ctx.author().id.to_string(),
@@ -329,25 +340,11 @@ async fn main() {
             on_error: |error| Box::pin(on_error(error)),
             ..Default::default()
         },
-        move |ctx, _ready, _framework| {
-            Box::pin(async move {
-                Ok(Data {
-                    cache_http: CacheHttpImpl {
-                        cache: ctx.cache.clone(),
-                        http: ctx.http.clone(),
-                    },
-                    pool: PgPoolOptions::new()
-                        .max_connections(MAX_CONNECTIONS)
-                        .connect(&config::CONFIG.database_url)
-                        .await
-                        .expect("Could not initialize connection"),
-                })
-            })
-        },
     );
 
     let mut client = client_builder
         .framework(framework)
+        .data(Arc::new(data))
         .await
         .expect("Error creating client");
 

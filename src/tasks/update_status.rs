@@ -8,11 +8,9 @@ enum Status {
 }
 
 pub async fn update_status(
-    _pool: &sqlx::PgPool,
-    _cache_http: &crate::cache::CacheHttpImpl,
-    ctx: &serenity::client::Context,
+    ctx: &serenity::all::Context,
 ) -> Result<(), crate::Error> {
-    let statuses = vec![
+    let statuses = [
         (Status::Watch, "sky!help"),
         (Status::Play, "stopping raids"),
         (Status::Listen, "to your commands"),
